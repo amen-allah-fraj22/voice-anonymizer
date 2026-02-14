@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signalement Vocal – SafeVoice</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px 32px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .shield-icon { font-size: 48px; margin-bottom: 16px; }
+
+    h1 { color: #1a365d; font-size: 1.4rem; margin-bottom: 8px; }
+
+    .subtitle {
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    /* ── Record Button ── */
+    .record-btn {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: none;
+      background: #e53e3e;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 15px rgba(229,62,62,0.4);
+    }
+
+    .record-btn:hover { transform: scale(1.05); }
+
+    .record-btn.recording {
+      background: #c53030;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(197,48,48,0.5); }
+      50%       { box-shadow: 0 0 0 20px rgba(197,48,48,0); }
+    }
+
+    .record-btn.recorded { background: #38a169; }
+
+    /* ── Status text ── */
+    .status {
+      font-size: 0.95rem;
+      color: #4a5568;
+      margin-bottom: 24px;
+      min-height: 24px;
+    }
+
+    .status.recording { color: #e53e3e; font-weight: 600; }
+    .status.success   { color: #38a169; font-weight: 600; }
+    .status.error     { color: #e53e3e; }
+
+    /* ── Timer ── */
+    .timer {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #1a365d;
+      margin-bottom: 16px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Audio preview ── */
+    audio {
+      width: 100%;
+      margin: 16px 0;
+      border-radius: 8px;
+    }
+
+    /* ── Submit button ── */
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: #2b6cb0;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+
+    .submit-btn:hover:not(:disabled) { background: #2c5282; }
+
+    .submit-btn:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+
+    /* ── Privacy notice ── */
+    .privacy-note {
+      margin-top: 20px;
+      padding: 12px;
+      background: #ebf8ff;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      color: #2c5282;
+      line-height: 1.5;
+    }
+
+    .privacy-note strong { display: block; margin-bottom: 4px; }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="shield-icon">🛡️</div>
+  <h1>Signalement Vocal Sécurisé</h1>
+  <p class="subtitle">
+    Votre voix sera automatiquement modifiée.<br>
+    Personne ne pourra vous identifier.
+  </p>
+
+  <!-- Timer display -->
+  <div class="timer" id="timer">00:00</div>
+
+  <!-- Main record button -->
+  <button class="record-btn" id="recordBtn" onclick="toggleRecording()">🎙️</button>
+
+  <!-- Status message -->
+  <p class="status" id="status">Appuyez pour commencer l'enregistrement</p>
+
+  <!-- Audio preview (shown after recording) -->
+  <audio id="audioPreview" controls class="hidden"></audio>
+
+  <!-- Submit button -->
+  <button class="submit-btn" id="submitBtn" disabled onclick="submitReport()">
+    Envoyer le signalement
+  </button>
+
+  <!-- Privacy notice -->
+  <div class="privacy-note">
+    <strong>🔒 Votre confidentialité est protégée</strong>
+    Votre voix originale n'est jamais stockée.
+    Notre système modifie automatiquement votre voix
+    avant tout traitement.
+  </div>
+</div>
+
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// VARIABLES
+// ─────────────────────────────────────────────────────────────────
+let mediaRecorder = null   // The recorder object
+let audioChunks   = []     // Pieces of audio as they come in
+let audioBlob     = null   // The final audio file
+let isRecording   = false  // Are we currently recording?
+let timerInterval = null   // For the timer display
+let secondsElapsed = 0     // How long we've been recording
+
+// DOM elements
+const recordBtn    = document.getElementById('recordBtn')
+const status       = document.getElementById('status')
+const timer        = document.getElementById('timer')
+const audioPreview = document.getElementById('audioPreview')
+const submitBtn    = document.getElementById('submitBtn')
+
+
+// ─────────────────────────────────────────────────────────────────
+// FORMAT TIME: converts seconds → "MM:SS"
+// ─────────────────────────────────────────────────────────────────
+function formatTime(seconds) {
+  const m = String(Math.floor(seconds / 60)).padStart(2, '0')
+  const s = String(seconds % 60).padStart(2, '0')
+  return `${m}:${s}`
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// TOGGLE RECORDING: start or stop
+// ─────────────────────────────────────────────────────────────────
+async function toggleRecording() {
+  if (!isRecording) {
+    await startRecording()
+  } else {
+    stopRecording()
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// START RECORDING
+// ─────────────────────────────────────────────────────────────────
+async function startRecording() {
+  try {
+    // Ask browser for microphone access
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+    // Reset state
+    audioChunks   = []
+    secondsElapsed = 0
+    timer.textContent = '00:00'
+
+    // Create the recorder
+    mediaRecorder = new MediaRecorder(stream)
+
+    // Each time a chunk of audio is ready, save it
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data)
+      }
+    }
+
+    // When recording stops, build the final audio blob
+    mediaRecorder.onstop = handleRecordingStop
+
+    // Start recording!
+    mediaRecorder.start(100) // collect data every 100ms
+    isRecording = true
+
+    // Update UI
+    recordBtn.textContent = '⏹️'
+    recordBtn.classList.add('recording')
+    status.textContent = 'Enregistrement en cours...'
+    status.className = 'status recording'
+    submitBtn.disabled = true
+
+    // Start timer
+    timerInterval = setInterval(() => {
+      secondsElapsed++
+      timer.textContent = formatTime(secondsElapsed)
+
+      // Auto-stop at 2 minutes to avoid huge files
+      if (secondsElapsed >= 120) {
+        stopRecording()
+      }
+    }, 1000)
+
+  } catch (error) {
+    // User denied microphone access or other error
+    status.textContent = '❌ Accès au microphone refusé'
+    status.className = 'status error'
+    console.error('Microphone error:', error)
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// STOP RECORDING
+// ─────────────────────────────────────────────────────────────────
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop()
+    isRecording = false
+    clearInterval(timerInterval)
+
+    // Stop all microphone tracks (releases mic)
+    mediaRecorder.stream.getTracks().forEach(track => track.stop())
+
+    recordBtn.textContent = '🎙️'
+    recordBtn.classList.remove('recording')
+    status.textContent = 'Traitement en cours...'
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// AFTER RECORDING STOPS: build the audio and show preview
+// ─────────────────────────────────────────────────────────────────
+function handleRecordingStop() {
+  // Combine all the audio chunks into one file
+  audioBlob = new Blob(audioChunks, { type: 'audio/wav' })
+
+  // Create a URL so we can preview it in the browser
+  const audioUrl = URL.createObjectURL(audioBlob)
+  audioPreview.src = audioUrl
+  audioPreview.classList.remove('hidden')
+
+  // Update UI
+  recordBtn.classList.remove('recording')
+  recordBtn.classList.add('recorded')
+  status.textContent = '✅ Enregistrement prêt — Écoutez avant d\'envoyer'
+  status.className = 'status success'
+  submitBtn.disabled = false
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// SUBMIT: send audio to your Node.js backend
+// ─────────────────────────────────────────────────────────────────
+async function submitReport() {
+  if (!audioBlob) return
+
+  // Disable button to prevent double-submit
+  submitBtn.disabled = true
+  submitBtn.innerHTML = '<span class="spinner"></span> Anonymisation en cours...'
+  status.textContent = 'Modification de votre voix en cours...'
+  status.className = 'status'
+
+  try {
+    // Build form data to send the audio file
+    const formData = new FormData()
+    formData.append('audio', audioBlob, 'report.wav')
+
+    // Send to your Node.js backend
+    // Your Node.js will forward it to the Python anonymizer
+    const response = await fetch('/api/report/voice', {
+      method: 'POST',
+      body: formData
+      // Don't set Content-Type header! Browser sets it automatically with boundary
+    })
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
+    }
+
+    const result = await response.json()
+
+    // ── SUCCESS ──────────────────────────────────────────────────
+    status.textContent = '✅ Signalement envoyé. Votre identité est protégée.'
+    status.className = 'status success'
+    submitBtn.innerHTML = '✅ Envoyé avec succès'
+
+    // Optional: save the report reference code for anonymous follow-up
+    if (result.reportCode) {
+      alert(`Votre code de suivi : ${result.reportCode}\nGardez-le précieusement.`)
+    }
+
+  } catch (error) {
+    // ── ERROR ─────────────────────────────────────────────────────
+    console.error('Submit error:', error)
+    status.textContent = '❌ Erreur lors de l\'envoi. Réessayez.'
+    status.className = 'status error'
+    submitBtn.disabled = false
+    submitBtn.innerHTML = 'Envoyer le signalement'
+  }
+}
+</script>
+
+</body>
+</html>
