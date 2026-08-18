@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.venv/
+__pycache__/
+*.py[cod]
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+.next/
+dist/
+build/
+out/
+
+# Logs / OS
+*.log
+.DS_Store
+
+# Apple/Google Wallet certs & keys (never commit)
+*.p12
+*.pem
+*.key
+*.cer
+*.mobileprovision

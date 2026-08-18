@@ -1,7 +1,0 @@
-# Install all of these with:
-# pip install -r requirements.txt
-
-flask==3.0.0        # Web server to receive requests from Node.js
-librosa==0.10.1     # Audio processing (pitch shift, time stretch)
-soundfile==0.12.1   # Save audio files
-numpy>=2.0.0        # Math operations (use 2.x for Python 3.13 pre-built wheels on Windows)
