@@ -8,9 +8,41 @@
 
 ---
 
+## 0.1 Tunisia Ground Adaptation (v2 — SUPERSEDES the sections it names)
+
+Based on founder input reflecting Tunisian reality. **Where this section conflicts with anything later in the doc, this section wins.**
+
+**Two decisions:**
+
+1. **No customer mobile payment. Ever.** Tunisia is cash-first and mobile payment is weak, but that's fine — **loyalty is not payment.** The customer keeps paying at the counter however they already do (cash/card). The app never touches the customer's money. The *only* place money flows through the platform is **the business paying its monthly Wala subscription**, and even that supports **manual bank transfer / cash / Konnect-Flouci link** — no card-on-file required. → **Supersedes §20–21 framing:** treat customer payment as out-of-scope; keep merchant billing only, manual-first.
+
+2. **The product is the digital fill-in card + captured customer contact.** The old paper punch card (where the customer writes their name/phone) becomes a **digital form + digital stamp card**. When a customer joins, the business captures **name + phone + email (with consent)**. That contact list — plus visit history — is the real asset and the moat. Apple/Google Wallet becomes an **optional bonus**, not the main path.
+
+**Primary customer flow becomes (web-first, Wallet optional):**
+```
+Counter QR  →  mobile web page  →  quick form (name, phone*, email, ✔ consent)
+            →  digital card issued (web card, works on ANY phone)
+            →  [optional] "Also add to Apple/Google Wallet" button
+            →  identity = PHONE NUMBER (always works, even old phones / no Wallet)
+   * phone is the primary identity + the WhatsApp/SMS channel
+```
+
+**Why phone-first, not Wallet-first:** most Tunisian customers are on Android, many won't bother adding a Wallet pass, and the **phone number is what the business actually wants** (for WhatsApp/SMS "come back" messages). So we lead with the simple web card + form; Wallet is a nice-to-have we offer *after* capture, never a requirement.
+
+**What changes in the rest of the doc:**
+- **§9 Module 3 / §11 Customer screens:** the **web card + join form is the primary experience**; Apple Wallet (§15) and Google Wallet (§16) become *optional add-ons* a customer may tap after joining. Build the web card + form FIRST; add Wallet passes second.
+- **§10 MVP:** enrollment form (name/phone/email + consent) is now a **core MVP feature**; Wallet passes can even be a fast-follow if timelines are tight — the web card alone is shippable.
+- **§13 DB:** `customers.phone` becomes the **primary identity** (already `UNIQUE(business_id, phone)`); a customer can exist with **no Wallet pass at all** (`loyalty_cards.wallet_pass_serial` / `google_object_id` are nullable — already are).
+- **§20–21 Pricing/economics:** remove customer-payment processing from cost model; merchant subscription is the only money flow; **manual/bank-transfer billing is the default at pilot**, Konnect/Flouci is the convenience upgrade.
+- **§14 APIs:** `POST /join/{slug}` now always collects the contact form; `/wallet/apple` and `/wallet/google` are optional follow-on calls, not part of the required join path.
+
+**Consent is mandatory at capture** (one checkbox on the form): Tunisia's data-protection law (INPDP) and WhatsApp's rules both require opt-in before you message people. Cheap to add, expensive to skip.
+
+---
+
 ## 0. Executive Summary
 
-**What we are building.** Wala is a **multi-tenant SaaS for customer loyalty and retention**, purpose-built for Tunisian small businesses (cafés, restaurants, fast-food, bakeries, ice-cream shops, hotels, salons, barbershops, retail). A merchant sets up a digital **stamp/points card** in minutes. Their customers **scan a QR at the counter → add a loyalty card to Apple Wallet / Google Wallet (or a lightweight web card) in ~15 seconds, no app to download**. Staff stamp customers with a phone/tablet scanner; the card updates over-the-air within seconds; the business can send push and WhatsApp/SMS campaigns to bring customers back.
+**What we are building.** Wala is a **multi-tenant SaaS for customer loyalty and retention**, purpose-built for Tunisian small businesses (cafés, restaurants, fast-food, bakeries, ice-cream shops, hotels, salons, barbershops, retail). It replaces the **paper fill-in punch card**: a customer **scans a QR at the counter → fills a quick form (name, phone, email + consent) → gets a digital stamp card that works on any phone** (a plain web card, with Apple/Google Wallet as an optional add-on). Staff stamp customers with a phone/tablet scanner; the business builds a **customer contact list it owns** and sends **WhatsApp/SMS/push** "come back" messages. **No customer payment is involved — the customer pays at the counter as always; the only money flow is the business's monthly subscription (manual/bank-transfer-friendly).** See **§0.1** for the Tunisia-adapted, phone-first model that governs the rest of this doc.
 
 **Why it can work in Tunisia.** The Wallet-loyalty model consistently produces **60–75% enrollment vs 10–20% for app-based loyalty** `[FACT — category data, Loopy/Loyally-class vendors]` because there's no app-install friction. Tunisia has a large SMS/WhatsApp culture, a fast-digitizing café/resto sector (QR menus are already normal), and **no dominant local Wallet-native loyalty player** — the closest, **Raba7ni**, is a *consumer aggregator* (one app, many shops) rather than a per-merchant branded-Wallet product `[INFERENCE from Raba7ni public description]`.
 
@@ -206,7 +238,7 @@ Sources: [Raba7ni](https://raba7ni.com/en-us) · [Digital Menu](https://digitalm
 
 **Module 2 — Loyalty engine.** *MVP:* **stamp cards** (buy N get 1), single active reward, visit tracking, per-visit + daily cap, reward expiry. *V2:* points mode, multiple rewards, birthday reward, referral reward, tiers. *V3:* campaign-linked rewards, rules engine, coalition/multi-brand.
 
-**Module 3 — Customer experience.** No app. *iPhone:* QR→web→**Add to Apple Wallet**. *Android:* QR→web→**Add to Google Wallet**; **PWA/web card fallback** for unsupported/older devices. *No account:* anonymous secure token card (name/phone optional). *Returning:* recognized by pass token; card already in wallet; OTA updates.
+**Module 3 — Customer experience (web-first per §0.1).** No app. **Primary path (all phones):** QR → web page → **quick form (name, phone, email + consent)** → **web/PWA stamp card** (works everywhere, identity = phone number). **Optional add-on after joining:** *iPhone* → "Add to Apple Wallet"; *Android* → "Add to Google Wallet" for OTA updates + wallet convenience. *Returning:* recognized by phone/card token; if they change phones, re-issue from the join link and merge by verified phone. Wallet passes are a bonus, never required.
 
 **Module 4 — Employee scanner (web/PWA).** Login (staff PIN + device bind), camera scan, customer result (name/balance/last visit/flags), one-tap stamp (idempotent), redeem (confirm), fraud guards (cap/cooldown/attribution), my-history, permissions.
 
