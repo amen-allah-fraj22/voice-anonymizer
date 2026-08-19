@@ -1,6 +1,6 @@
-# Wala — Tunisian Customer-Loyalty SaaS · Implementation Blueprint
+# Fidel — Tunisian Customer-Loyalty SaaS · Implementation Blueprint
 
-> **Working brand:** **Wala** (from Arabic *walaʾ / ولاء* = "loyalty"). Short, brandable, meaningful in Arabic/French/English, likely `.tn` available. **Placeholder only — trademark + domain must be verified before commitment.** Alternatives: *Baraka*, *Fidli*, *Nقطة/Nokta*, *WinPoints*.
+> **Brand:** **Fidel** (from French *fidélité* = "loyalty"; reads naturally in French and Arabic script *فيدال*). Short, brandable, `.tn`/`.com` availability **to be verified before commitment**.
 >
 > **Author's note on sources.** `tapcarry.com` was blocked by this environment's network egress proxy, so I could **not** directly observe its pages. My "Tapcarry deconstruction" is therefore reconstructed from (a) the well-documented Apple/Google-Wallet digital-loyalty product category to which it belongs — Loopy Loyalty, Stampede, Boomerangme, Stamp Me, Loyally.ai, Stampeo, etc. — and (b) public search snippets. **I mark every such statement as an inference, not an observed fact.** Before finalizing product decisions, re-verify Tapcarry's exact feature set and pricing directly from its site.
 
@@ -14,7 +14,7 @@ Based on founder input reflecting Tunisian reality. **Where this section conflic
 
 **Two decisions:**
 
-1. **No customer mobile payment. Ever.** Tunisia is cash-first and mobile payment is weak, but that's fine — **loyalty is not payment.** The customer keeps paying at the counter however they already do (cash/card). The app never touches the customer's money. The *only* place money flows through the platform is **the business paying its monthly Wala subscription**, and even that supports **manual bank transfer / cash / Konnect-Flouci link** — no card-on-file required. → **Supersedes §20–21 framing:** treat customer payment as out-of-scope; keep merchant billing only, manual-first.
+1. **No customer mobile payment. Ever.** Tunisia is cash-first and mobile payment is weak, but that's fine — **loyalty is not payment.** The customer keeps paying at the counter however they already do (cash/card). The app never touches the customer's money. The *only* place money flows through the platform is **the business paying its monthly Fidel subscription**, and even that supports **manual bank transfer / cash / Konnect-Flouci link** — no card-on-file required. → **Supersedes §20–21 framing:** treat customer payment as out-of-scope; keep merchant billing only, manual-first.
 
 2. **The product is the digital fill-in card + captured customer contact.** The old paper punch card (where the customer writes their name/phone) becomes a **digital form + digital stamp card**. When a customer joins, the business captures **name + phone + email (with consent)**. That contact list — plus visit history — is the real asset and the moat. Apple/Google Wallet becomes an **optional bonus**, not the main path.
 
@@ -42,7 +42,7 @@ Counter QR  →  mobile web page  →  quick form (name, phone*, email, ✔ cons
 
 ## 0. Executive Summary
 
-**What we are building.** Wala is a **multi-tenant SaaS for customer loyalty and retention**, purpose-built for Tunisian small businesses (cafés, restaurants, fast-food, bakeries, ice-cream shops, hotels, salons, barbershops, retail). It replaces the **paper fill-in punch card**: a customer **scans a QR at the counter → fills a quick form (name, phone, email + consent) → gets a digital stamp card that works on any phone** (a plain web card, with Apple/Google Wallet as an optional add-on). Staff stamp customers with a phone/tablet scanner; the business builds a **customer contact list it owns** and sends **WhatsApp/SMS/push** "come back" messages. **No customer payment is involved — the customer pays at the counter as always; the only money flow is the business's monthly subscription (manual/bank-transfer-friendly).** See **§0.1** for the Tunisia-adapted, phone-first model that governs the rest of this doc.
+**What we are building.** Fidel is a **multi-tenant SaaS for customer loyalty and retention**, purpose-built for Tunisian small businesses (cafés, restaurants, fast-food, bakeries, ice-cream shops, hotels, salons, barbershops, retail). It replaces the **paper fill-in punch card**: a customer **scans a QR at the counter → fills a quick form (name, phone, email + consent) → gets a digital stamp card that works on any phone** (a plain web card, with Apple/Google Wallet as an optional add-on). Staff stamp customers with a phone/tablet scanner; the business builds a **customer contact list it owns** and sends **WhatsApp/SMS/push** "come back" messages. **No customer payment is involved — the customer pays at the counter as always; the only money flow is the business's monthly subscription (manual/bank-transfer-friendly).** See **§0.1** for the Tunisia-adapted, phone-first model that governs the rest of this doc.
 
 **Why it can work in Tunisia.** The Wallet-loyalty model consistently produces **60–75% enrollment vs 10–20% for app-based loyalty** `[FACT — category data, Loopy/Loyally-class vendors]` because there's no app-install friction. Tunisia has a large SMS/WhatsApp culture, a fast-digitizing café/resto sector (QR menus are already normal), and **no dominant local Wallet-native loyalty player** — the closest, **Raba7ni**, is a *consumer aggregator* (one app, many shops) rather than a per-merchant branded-Wallet product `[INFERENCE from Raba7ni public description]`.
 
@@ -221,7 +221,7 @@ Sources: [Raba7ni](https://raba7ni.com/en-us) · [Digital Menu](https://digitalm
 
 ## 8. Our Product Concept (Part 10)
 
-- **Core proposition (one sentence):** *Wala turns every Tunisian café, restaurant, or shop into a repeat-visit machine — a branded loyalty card that lives in the customer's phone wallet, stamped in one tap at the counter, with WhatsApp/push to bring them back — no app, priced in dinars.*
+- **Core proposition (one sentence):** *Fidel turns every Tunisian café, restaurant, or shop into a repeat-visit machine — a branded loyalty card that lives in the customer's phone wallet, stamped in one tap at the counter, with WhatsApp/push to bring them back — no app, priced in dinars.*
 - **Target customer (ICP):** owner-operated Tunisian café / fast-food / bakery / ice-cream / salon / barbershop with **recurring customers, 1–3 locations, WhatsApp Business, no loyalty tooling today.** Beachhead: **specialty cafés & bakeries in Grand Tunis + Sousse/Sfax**.
 - **Customer problem:** paper cards get lost; no reason to remember which café; no reminders.
 - **Business problem:** can't identify or reach regulars; marketing is random; retention is invisible.
@@ -398,7 +398,7 @@ Example — `POST /api/v1/scan/stamp`: **Auth** device token · **Role** employe
 2. **Pass type for loyalty:** **`storeCard`** style (loyalty). Use `primaryFields` for balance ("Stamps 7/10"), `secondaryFields` for reward, `barcode` = the `card_token` (QR/PDF417).
 3. **Server generates pass:** build `pass.json` (passTypeIdentifier, teamIdentifier, serialNumber=card, `webServiceURL`, `authenticationToken`, fields, barcode) → add images → SHA-1 `manifest.json` → sign → zip → serve as `application/vnd.apple.pkpass`.
 4. **Signing:** CMS/PKCS#7 detached signature over `manifest.json` using your **Pass Type ID certificate + private key + Apple WWDR intermediate** ([TN2302](https://developer.apple.com/library/archive/technotes/tn2302/_index.html)). Missing WWDR intermediate is the #1 signing failure.
-5. **Certificates required:** Apple Developer account; **Pass Type ID** (`pass.com.wala.loyalty`) + its cert; **Apple WWDR intermediate**; **APNs auth** (the same Pass Type cert/key is used to push pass updates).
+5. **Certificates required:** Apple Developer account; **Pass Type ID** (`pass.com.fidel.loyalty`) + its cert; **Apple WWDR intermediate**; **APNs auth** (the same Pass Type cert/key is used to push pass updates).
 6. **Pass updates:** change balance server-side → send an **empty APNs push** to each registered device's pushToken → device calls your web service `GET passes/{type}/{serial}` → you return the new `.pkpass`.
 7. **Device receipt:** device registers via the web-service `register` endpoint (stores deviceLibraryId + pushToken + serial); your empty push wakes it to pull the update.
 8. **Displayable info:** balance, reward, business name/logo, colors, barcode, back-of-card terms/contact, relevant-date/location (optional lock-screen relevance).
@@ -486,7 +486,7 @@ Example — `POST /api/v1/scan/stamp`: **Auth** device token · **Role** employe
 
 | Plan | Price/mo | /yr | Locations | Staff | Customers | Programs | Push | SMS/WA | Analytics | Branding | Support |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **Free** | 0 | 0 | 1 | 1 | 200 | 1 | 100/mo | 0 (buy) | basic | "Powered by Wala" | community |
+| **Free** | 0 | 0 | 1 | 1 | 200 | 1 | 100/mo | 0 (buy) | basic | "Powered by Fidel" | community |
 | **Starter** | **39 TND** | 390 | 1 | 3 | 1,000 | 1 | 1,000/mo | 200/mo | core | remove badge | email/WhatsApp |
 | **Pro** | **89 TND** | 890 | 2 | 8 | 5,000 | 3 | 5,000/mo | 1,000/mo | full + export | full | priority WhatsApp |
 | **Business** | **199 TND** | 1,990 | 5 | 25 | 20,000 | 10 | 20,000/mo | 5,000/mo | full + cohorts | full + custom domain | priority + onboarding |
@@ -555,7 +555,7 @@ SMS/WhatsApp overage sold in bundles (pass-through + margin). **Rationale:** 39 
 ## 24. Repository Structure (Part 24)
 
 ```
-wala/                      # monorepo (pnpm + turbo optional)
+fidel/                      # monorepo (pnpm + turbo optional)
 ├─ apps/
 │  ├─ web/                 # Next.js: marketing + dashboard + customer card + scanner PWA
 │  │  ├─ app/(marketing)/  # home, pricing, faq
@@ -710,7 +710,7 @@ If it works, what stops a copycat? Ranked moats:
 
 ## 34. Exact First 30 Development Tasks (Day 1 →)
 
-1. **Decide & trademark-check the brand/domain** (Wala or alt); register `.tn` + `.com`; set up Google Workspace email.
+1. **Decide & trademark-check the brand/domain** (Fidel or alt); register `.tn` + `.com`; set up Google Workspace email.
 2. **Interview 8–10 target café/resto owners** (retention pain, willingness-to-pay, "returning customer" value) — capture in a validation doc.
 3. **Confirm Tapcarry's real feature set + pricing** directly (unblock/visit site) and adjust assumptions.
 4. **Validate providers:** open **Apple Developer** ($99/yr) + **Google Cloud/Wallet issuer** accounts; shortlist **WhatsApp BSP + SMS aggregator** with TN reach; confirm **Konnect/Flouci** merchant onboarding + fees.
